@@ -1,5 +1,3 @@
-sudo yum update -y
-
 # Install AWS CLI
 sudo yum install python-setuptools python-pip -y
 pip install awscli
