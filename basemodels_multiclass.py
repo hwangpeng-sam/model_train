@@ -405,57 +405,53 @@ class MultiSeqNormalUmapGating(nn.Module):
         fc_out = self.top(fc_out)
         return F.log_softmax(fc_out, dim=1)
 
-import pandas as pd
 if __name__ == '__main__':
-    pd.DataFrame([1, 2, 3]).to_csv('test.csv', index = False)
 
-# if __name__ == '__main__':
+    # hidden_size, station_embedding_dim, embedding_dim
+    HIDDEN_SIZE = 32
+    STATION_EMBEDDING_DIM = 8
+    EMBEDDING_DIM = 8
 
-#     # hidden_size, station_embedding_dim, embedding_dim
-#     HIDDEN_SIZE = 32
-#     STATION_EMBEDDING_DIM = 8
-#     EMBEDDING_DIM = 8
+    R_seq = np.random.rand(16, 12, 1)
+    H_seq = np.random.rand(16, 4, 1)
+    T = np.hstack([
+        np.random.choice(range(144), (16, 1)),
+        np.random.choice(range(7), (16,1)),
+        np.random.choice(range(2), (16,1))
+        ])
+    S = np.hstack([
+        np.random.choice(range(20), (16,1)),
+        np.random.rand(16, 15)
+    ])
+    Y_seq = np.random.choice(range(3), (16,1))
 
-#     R_seq = np.random.rand(16, 12, 1)
-#     H_seq = np.random.rand(16, 4, 1)
-#     T = np.hstack([
-#         np.random.choice(range(144), (16, 1)),
-#         np.random.choice(range(7), (16,1)),
-#         np.random.choice(range(2), (16,1))
-#         ])
-#     S = np.hstack([
-#         np.random.choice(range(20), (16,1)),
-#         np.random.rand(16, 15)
-#     ])
-#     Y_seq = np.random.choice(range(3), (16,1))
+    print(R_seq.shape, H_seq.shape, Y_seq.shape, T.shape, S.shape)
 
-#     print(R_seq.shape, H_seq.shape, Y_seq.shape, T.shape, S.shape)
+    dataset = EvcDataset(R_seq, H_seq, T, S, Y_seq)
+    dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+    r, h, t, s, y = next(iter(dataloader))
 
-#     dataset = EvcDataset(R_seq, H_seq, T, S, Y_seq)
-#     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
-#     r, h, t, s, y = next(iter(dataloader))
+    # model = MultiSeqHybrid(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM)
+    # model = MultiSeqUmap(n_labels=3, hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, dropout_p=0.2, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
+    # model = MultiSeqHybridUmap(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
+    # model = MultiSeqUmapGating(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
+    # model = MultiSeqHybridUmapEarlyGating(n_labels=3, hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, dropout_p=0.2, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
 
-#     # model = MultiSeqHybrid(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM)
-#     # model = MultiSeqUmap(n_labels=3, hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, dropout_p=0.2, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
-#     # model = MultiSeqHybridUmap(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
-#     # model = MultiSeqUmapGating(hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
-#     # model = MultiSeqHybridUmapEarlyGating(n_labels=3, hidden_size=HIDDEN_SIZE, embedding_dim=EMBEDDING_DIM, dropout_p=0.2, pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float())
+    models = {'MultiSeqBase':MultiSeqBase, 'MultiSeqNormal':MultiSeqNormal, 'MultiSeqUmap':MultiSeqUmap, 'MultiSeqUmapEmb':MultiSeqUmapEmb, 'MultiSeqUmapEmbGating':MultiSeqUmapEmbGating}
+    for name, testmodel in models.items():
+        if name in ['MultiSeqUmapEmb', 'MultiSeqUmap', 'MultiSeqUmapEmbGating']:
+            model = testmodel(n_labels=3, hidden_size=32, embedding_dim=4, 
+                              pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float(), dropout_p=0.2)
+        else:
+            model = testmodel(n_labels=3, hidden_size=32, embedding_dim=4, dropout_p=0.2)
 
-#     models = {'MultiSeqBase':MultiSeqBase, 'MultiSeqNormal':MultiSeqNormal, 'MultiSeqUmap':MultiSeqUmap, 'MultiSeqUmapEmb':MultiSeqUmapEmb, 'MultiSeqUmapEmbGating':MultiSeqUmapEmbGating}
-#     for name, testmodel in models.items():
-#         if name in ['MultiSeqUmapEmb', 'MultiSeqUmap', 'MultiSeqUmapEmbGating']:
-#             model = testmodel(n_labels=3, hidden_size=32, embedding_dim=4, 
-#                               pretrained_embedding=torch.tensor(np.random.rand(20, 8)).float(), dropout_p=0.2)
-#         else:
-#             model = testmodel(n_labels=3, hidden_size=32, embedding_dim=4, dropout_p=0.2)
+        pred = model(r, h, t, s)
+        pred_labels = pred.argmax(dim=1, keepdim=True)
 
-#         pred = model(r, h, t, s)
-#         pred_labels = pred.argmax(dim=1, keepdim=True)
-
-#         loss = F.nll_loss(pred, y.flatten())
-#         print('loss: ', loss.item())
-#         print(f1_score(y, pred_labels, average='macro'))
-#         print('recall {}'.format(recall_score(y, pred_labels, labels=[0, 1, 2], average=None)))
-#         auc_macro = roc_auc_score(y.flatten(), torch.exp(pred).detach().numpy(), average='macro', multi_class='ovr')
-#         auc_weighted = roc_auc_score(y.flatten(), torch.exp(pred).detach().numpy(), average='weighted', multi_class='ovr')
-#         print(auc_macro, auc_weighted)
+        loss = F.nll_loss(pred, y.flatten())
+        print('loss: ', loss.item())
+        print(f1_score(y, pred_labels, average='macro'))
+        print('recall {}'.format(recall_score(y, pred_labels, labels=[0, 1, 2], average=None)))
+        auc_macro = roc_auc_score(y.flatten(), torch.exp(pred).detach().numpy(), average='macro', multi_class='ovr')
+        auc_weighted = roc_auc_score(y.flatten(), torch.exp(pred).detach().numpy(), average='weighted', multi_class='ovr')
+        print(auc_macro, auc_weighted)
